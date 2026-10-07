@@ -1,0 +1,649 @@
+# Music Discovery Bot — Discovery Specification
+
+## 1. Цель проекта
+
+Нужно превратить Telegram-бота в полноценный инструмент музыкального discovery.
+
+Главная цель — находить не просто треки с одинаковыми жанровыми тегами, а музыкально действительно близкие треки.
+
+Бот должен быть особенно хорошо ориентирован на underground electronic music:
+
+- microhouse
+- minimal house
+- minimal techno
+- tech house
+- techno
+- breakbeat
+- broken techno
+- electro
+- jungle
+- dub
+- experimental electronic
+- близкие underground-направления
+
+Главный принцип:
+
+GENRE SIMILARITY != SONIC SIMILARITY
+
+Совпадение жанра должно быть только одним из факторов.
+
+---
+
+# 2. Типы пользовательского ввода
+
+Бот должен понимать:
+
+### Artist
+
+Пример:
+
+Ricardo Villalobos
+
+В этом случае пользователь ищет музыку артиста.
+
+### Artist + Track
+
+Примеры:
+
+Ricardo Villalobos — Easy Lee
+
+Kangurul - Movement Engineering
+
+В этом случае нужно искать именно конкретный трек, а не анализировать артиста целиком.
+
+### Track title
+
+Пример:
+
+Easy Lee
+
+Нужно найти наиболее вероятный конкретный трек.
+
+### URL
+
+Поддержать:
+
+- YouTube
+- YouTube Shorts / youtu.be
+- SoundCloud
+- Bandcamp
+
+URL должен рассматриваться как ссылка на конкретный reference track.
+
+---
+
+# 3. Track Resolution
+
+Создать отдельный этап:
+
+USER INPUT
+→ QUERY TYPE DETECTION
+→ TRACK / ARTIST RESOLUTION
+→ REFERENCE IDENTIFICATION
+
+Система должна определить:
+
+- artist
+- track title
+- source
+- URL
+- available metadata
+
+Если пользователь отправил URL конкретного трека, именно этот трек должен стать reference.
+
+Если пользователь написал Artist — Track, нужно искать конкретный Track.
+
+Нельзя автоматически превращать запрос "Artist — Track" в поиск похожих артистов.
+
+Если название неоднозначное, показать несколько вариантов и попросить пользователя выбрать.
+
+---
+
+# 4. Multi-source discovery
+
+MusicBrainz НЕ должен быть обязательным источником.
+
+MusicBrainz можно оставить как дополнительный metadata source / fallback.
+
+Если артист или трек отсутствует в MusicBrainz, discovery pipeline НЕ должен останавливаться.
+
+Использовать несколько источников:
+
+1. Bandcamp
+2. SoundCloud
+3. YouTube
+4. Web search
+5. MusicBrainz
+6. другие доступные источники, если они технически доступны
+
+Особенно важно находить малоизвестных underground-артистов.
+
+Пример:
+
+Kangurul
+
+Если MusicBrainz ничего не возвращает, система должна продолжить поиск через другие источники.
+
+---
+
+# 5. Поиск по ссылке
+
+Это обязательная функция.
+
+Примеры:
+
+YouTube URL
+SoundCloud URL
+Bandcamp URL
+
+Pipeline:
+
+URL
+→ identify source
+→ identify artist/title
+→ collect metadata
+→ attempt audio/features extraction if technically possible
+→ create reference profile
+→ search similar music
+
+Если источник невозможно напрямую проанализировать, использовать URL и найденные metadata для продолжения поиска.
+
+Ошибка одного источника НЕ должна останавливать весь pipeline.
+
+---
+
+# 6. Reference Track
+
+Самое важное правило проекта:
+
+SIMILARITY SHOULD BE TRACK-BASED WHENEVER POSSIBLE.
+
+Пример:
+
+Ricardo Villalobos
+
+и
+
+Ricardo Villalobos — Easy Lee
+
+Это разные запросы.
+
+В первом случае можно анализировать артиста.
+
+Во втором случае reference должен быть именно Easy Lee.
+
+То же самое:
+
+Kangurul — Movement Engineering
+
+должен анализироваться как конкретный трек.
+
+---
+
+# 7. Musical Profile
+
+Для каждого reference track создавать структурированный musical profile.
+
+Пример структуры:
+
+BPM
+Rhythm type
+4x4 / broken
+Groove
+Bass weight
+Kick characteristics
+Percussion density
+Drum pattern
+Syncopation
+Texture
+Timbre
+Harmonic density
+Melody density
+Atmosphere
+Energy
+Minimalism
+Experimental character
+Vocal presence
+Electronic/acoustic character
+Production roughness
+Overall sonic character
+
+Значения должны быть рассчитаны на основании реально доступных данных.
+
+Не придумывать характеристики без источника.
+
+---
+
+# 8. Audio Analysis
+
+Если технически возможно, приоритет должен быть у реального audio analysis.
+
+Желательно анализировать:
+
+- BPM
+- beat structure
+- rhythm
+- kick
+- bass
+- spectral characteristics
+- percussion
+- energy
+- harmonic content
+- timbre
+- texture
+- dynamics
+
+Если полноценный audio analysis пока невозможен, архитектура должна быть сделана так, чтобы его можно было добавить позже.
+
+Metadata analysis должен оставаться fallback, а не конечной системой.
+
+---
+
+# 9. Candidate Retrieval
+
+По reference track сначала необходимо собрать широкий список кандидатов.
+
+Не выбирать сразу первые 5 результатов.
+
+Pipeline:
+
+REFERENCE
+→ MULTI-SOURCE SEARCH
+→ LARGE CANDIDATE POOL
+→ FEATURE ANALYSIS
+→ SIMILARITY RANKING
+→ FILTERING
+→ TOP RESULTS
+
+Желательно получать 20–100 кандидатов перед финальным ranking, если источники позволяют.
+
+---
+
+# 10. Similarity Ranking
+
+Жанр НЕ должен быть главным фактором.
+
+Использовать multi-factor similarity.
+
+Минимально учитывать:
+
+- BPM / tempo
+- rhythm
+- groove
+- bass weight
+- kick
+- percussion
+- drum pattern
+- syncopation
+- texture
+- timbre
+- harmonic density
+- melody density
+- atmosphere
+- energy
+- minimalism
+- experimental character
+- production character
+- genre / subgenre
+
+Genre similarity = только один фактор.
+
+Два techno-трека могут звучать совершенно по-разному.
+
+Два трека разных жанров могут быть очень близки по звучанию.
+
+Такие cross-genre similarities должны быть разрешены.
+
+---
+
+# 11. Similarity Score
+
+Каждый кандидат должен получить итоговый score.
+
+Например:
+
+Overall similarity: 91/100
+
+Rhythm: 94
+Groove: 93
+Bass: 90
+Texture: 88
+Energy: 91
+Style: 85
+
+Фактические веса выбрать на основании архитектуры.
+
+Главное:
+
+Overall similarity должен отражать общую музыкальную близость.
+
+Нельзя считать score только по количеству совпавших жанров.
+
+---
+
+# 12. Explanation
+
+Не использовать объяснения вида:
+
+"Общие стили: techno / minimal techno."
+
+Нужно объяснять музыкальную причину.
+
+Например:
+
+"Похож из-за плотного 4x4 groove, похожего веса баса и сухой перкуссии. При этом кандидат немного темнее и менее broken."
+
+Объяснение должно быть связано с реально рассчитанными признаками.
+
+---
+
+# 13. Underground Bias
+
+Цель — discovery, а не популярность.
+
+Не поднимать автоматически:
+
+- популярных артистов
+- чарты
+- очевидные club hits
+- mainstream releases
+
+Если два кандидата имеют похожий similarity score, предпочтение может получать более underground / менее очевидный артист.
+
+Особенно важны:
+
+- маленькие лейблы
+- Bandcamp releases
+- SoundCloud artists
+- независимые артисты
+- малоизвестные electronic releases
+
+Но underground-фактор не должен позволять плохому по звучанию треку обгонять действительно похожий трек.
+
+Музыкальная близость всегда важнее неизвестности артиста.
+
+---
+
+# 14. Personal Taste Profile
+
+Система должна постепенно ориентироваться на музыкальный профиль пользователя.
+
+Приоритетные характеристики:
+
+- плотный groove
+- сильный low-end
+- bass-heavy sound
+- плотная percussion
+- repetitive groove
+- microhouse
+- minimal house
+- minimal techno
+- tech house
+- techno
+- broken rhythm
+- breakbeat elements
+- underground atmosphere
+- unusual texture
+- controlled chaos
+- mechanical / organic groove
+- interesting rhythmic details
+
+Не являются приоритетом:
+
+- pop
+- mainstream electronic
+- obvious festival tracks
+- generic EDM
+- слишком простая minimal music
+- слишком polished production
+- случайное совпадение по жанру
+- слишком очевидные club bangers
+
+Музыка не обязана быть dark.
+
+Главное — groove, texture, rhythm, bass и underground character.
+
+---
+
+# 15. Discovery Chain
+
+Пользователь должен иметь возможность использовать найденный трек как новый reference.
+
+Пример:
+
+Track A
+→ 10 похожих tracks
+→ пользователь выбирает Track B
+→ Track B становится новым reference
+→ новый discovery cycle
+
+Это должно позволять делать настоящий музыкальный digging.
+
+---
+
+# 16. Telegram Output
+
+По умолчанию показывать 5 лучших результатов.
+
+Архитектура должна позволять получать 10+ результатов.
+
+Формат:
+
+Artist — Track
+
+Similarity: 91/100
+
+Source: Bandcamp
+
+Why:
+Похожий groove, плотный low-end и сухая percussion. Более broken rhythm, чем у reference.
+
+Direct link:
+[link]
+
+---
+
+# 17. Artist-only queries
+
+Если пользователь пишет только артиста:
+
+Ricardo Villalobos
+
+Kangurul
+
+Nina Kraviz
+
+Guf
+
+система должна уметь найти артиста даже если MusicBrainz его не знает.
+
+После нахождения артиста:
+
+- найти релевантные треки;
+- выбрать representative tracks;
+- использовать их для discovery;
+- либо предложить пользователю выбрать конкретный track.
+
+Не ограничиваться MusicBrainz.
+
+---
+
+# 18. Tests
+
+После реализации обязательно протестировать:
+
+1. Ricardo Villalobos
+
+2. Ricardo Villalobos — Easy Lee
+
+3. Kangurul
+
+4. Kangurul — Movement Engineering
+
+5. Nina Kraviz
+
+6. Guf
+
+7. YouTube track URL
+
+8. SoundCloud track URL
+
+9. Bandcamp track URL
+
+Для каждого теста показать:
+
+- detected query type
+- resolved artist
+- resolved track
+- source
+- sources used
+- number of candidates found
+- top 5 results
+- similarity score
+- explanation
+
+---
+
+# 19. Failure handling
+
+Если MusicBrainz возвращает:
+
+HTTP 503
+
+или любой другой временный error:
+
+- retry;
+- ограничить количество попыток;
+- после retry использовать fallback sources.
+
+MusicBrainz failure НЕ должен ломать discovery.
+
+То же самое относится к другим источникам.
+
+Один недоступный source не должен останавливать весь pipeline.
+
+---
+
+# 20. Architecture
+
+Желаемая архитектура:
+
+INPUT
+
+↓
+
+QUERY TYPE DETECTION
+
+↓
+
+TRACK / ARTIST RESOLUTION
+
+↓
+
+MULTI-SOURCE RETRIEVAL
+
+↓
+
+REFERENCE PROFILE
+
+↓
+
+CANDIDATE GENERATION
+
+↓
+
+FEATURE EXTRACTION
+
+↓
+
+SIMILARITY RANKING
+
+↓
+
+UNDERGROUND / QUALITY FILTER
+
+↓
+
+FINAL RESULTS
+
+Telegram interface должен быть отделён от discovery engine насколько это возможно.
+
+---
+
+# 21. Development Rules
+
+Перед изменением кода:
+
+1. Изучи текущую архитектуру.
+2. Найди существующий discovery pipeline.
+3. Найди все места, где MusicBrainz является обязательным.
+4. Определи, какие функции уже работают.
+5. Не удаляй рабочую Telegram functionality.
+6. Не переписывай весь проект без необходимости.
+
+Изменения делать небольшими логическими этапами.
+
+После каждого этапа запускать существующие tests.
+
+---
+
+# 22. Current Priority
+
+Приоритет разработки:
+
+1. Universal input
+2. Track resolution
+3. URL support
+4. Multi-source search
+5. MusicBrainz optional/fallback
+6. Candidate generation
+7. Better ranking
+8. Musical feature analysis
+9. Personal taste profile
+10. Discovery chain
+
+Не начинать с UI redesign.
+
+Сначала сделать качественный discovery engine.
+
+---
+
+# 23. Definition of Done
+
+Система считается успешной, если:
+
+- пользователь может отправить URL трека;
+- пользователь может написать Artist — Track;
+- пользователь может написать только Track;
+- пользователь может написать Artist;
+- бот может находить малоизвестных артистов без MusicBrainz;
+- MusicBrainz не является single point of failure;
+- конкретный track используется как reference;
+- система собирает широкий candidate pool;
+- ranking не основан только на жанрах;
+- similarity учитывает музыкальные характеристики;
+- результаты имеют similarity score;
+- результаты имеют объяснение;
+- есть прямые ссылки на найденные треки;
+- существующая Telegram functionality продолжает работать;
+- все основные тесты проходят.
+
+---
+
+# 24. IMPORTANT
+
+Не реализовывать предположения о DigDeeper/DigDigger как факт.
+
+Если требуется изучить внешний сервис, сначала исследовать его публично доступную функциональность и архитектурные принципы.
+
+Не копировать чужой код или дизайн.
+
+Можно использовать общие технические идеи:
+
+- reference track
+- audio similarity
+- multi-factor ranking
+- similarity score
+- multi-source discovery
+
+Цель — создать собственную систему музыкального discovery, ориентированную на underground music и personal taste пользователя.
